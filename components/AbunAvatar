@@ -1,0 +1,389 @@
+import React from 'react';
+import { motion, Variants } from 'framer-motion'; 
+
+// Check if framer-motion loaded correctly
+const IS_MOTION_LOADED = typeof motion !== 'undefined';
+if (!IS_MOTION_LOADED) {
+  console.error(
+    "AbunAvatar: Framer Motion ('motion' object) is not loaded. Animations will be disabled, and a static placeholder will be shown. This might be due to a CDN issue or network problem."
+  );
+}
+
+interface RobotIconSVGProps {
+  className?: string;
+  isTyping?: boolean;
+  isInteractive?: boolean; 
+}
+
+const ABUN_HEAD_COLOR = '#FFFFFF'; // White faceplate
+const ABUN_BODY_COLOR = 'var(--robot-body-color)'; 
+const ABUN_ARM_COLOR = '#FFFFFF'; 
+// const ABUN_PECI_COLOR = '#FFFFFF'; // Peci color white - Will be overridden by neon animation
+const ABUN_CHEST_ACCENT_COLOR = '#FFFFFF'; 
+const ABUN_TEXT_ON_CHEST_COLOR = 'var(--color-theme-text)'; 
+const ABUN_DETAIL_COLOR = 'var(--robot-detail-color)'; 
+
+// Neon Red Colors for "BBA" text
+const NEON_RED_TEXT_FILL = '#FF1818'; 
+const NEON_RED_GLOW_MAIN = '#FF1818';
+const NEON_RED_GLOW_WIDE_1 = 'var(--color-theme-accent)'; 
+const NEON_RED_GLOW_WIDE_2 = 'var(--color-theme-accent-hover)'; 
+
+// Neon Colors for Antenna & Peci
+const NEON_GREEN_COLOR = '#39FF14';
+const NEON_YELLOW_COLOR = '#FFF01F';
+const NEON_RED_COLOR = '#FF1818'; // Consistent with BBA text
+
+
+const RobotIconSVG: React.FC<RobotIconSVGProps> = ({ className, isTyping, isInteractive }) => {
+  if (!IS_MOTION_LOADED) {
+    // Render a static placeholder if framer-motion is not available
+    return (
+      <svg 
+        viewBox="0 0 100 100" 
+        xmlns="http://www.w3.org/2000/svg" 
+        className={className}
+        aria-label="Avatar Asisten AI Abun (Animasi dinonaktifkan)"
+      >
+        <defs>
+          <filter id="static-antenna-glow-filter" x="-150%" y="-150%" width="400%" height="400%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+            <feFlood floodColor={NEON_GREEN_COLOR} floodOpacity="0.9" result="floodColor"/>
+            <feComposite in="floodColor" in2="blur" operator="in" result="glow"/>
+            <feMerge>
+              <feMergeNode in="glow"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+          <filter id="static-peci-glow-filter" x="-150%" y="-150%" width="400%" height="400%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="blurStaticPeci"/>
+            <feFlood floodColor={NEON_RED_COLOR} floodOpacity="0.9" result="floodColorStaticPeci"/>
+            <feComposite in="floodColorStaticPeci" in2="blurStaticPeci" operator="in" result="glowStaticPeci"/>
+            <feMerge>
+              <feMergeNode in="glowStaticPeci"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        <circle cx="50" cy="35" r="22" fill={ABUN_HEAD_COLOR} stroke={ABUN_DETAIL_COLOR} strokeWidth="1"/>
+        {/* Peci path updated for static SVG - Significantly Taller Peci, with static neon glow */}
+        <path d="M35 20 Q 50 0, 65 20 L 63 22 Q 50 18, 37 22 Z" 
+              fill={NEON_RED_COLOR} 
+              stroke={ABUN_DETAIL_COLOR} 
+              strokeWidth="0.5"
+              filter="url(#static-peci-glow-filter)"
+        />
+        <ellipse cx="50" cy="70" rx="30" ry="25" fill={ABUN_BODY_COLOR} stroke={ABUN_DETAIL_COLOR} strokeWidth="1"/>
+        <circle cx="50" cy="70" r="18" fill={ABUN_CHEST_ACCENT_COLOR} />
+        <text 
+            x="50" y="67.5" // Adjusted Y for larger font
+            fontFamily='"Orbitron", sans-serif' 
+            fontSize="7.5" // Increased font size
+            fill={NEON_RED_TEXT_FILL} 
+            textAnchor="middle" 
+            dominantBaseline="central" 
+            fontWeight="bold"
+            style={{ textShadow: `0 0 2px #FFFFFF, 0 0 5px ${NEON_RED_GLOW_MAIN}, 0 0 10px ${NEON_RED_GLOW_WIDE_1}, 0 0 15px ${NEON_RED_GLOW_WIDE_2}` }}
+        >
+            BBA
+        </text>
+        <text x="50" y="75" fontFamily='"Orbitron", sans-serif' fontSize="5" fill={ABUN_TEXT_ON_CHEST_COLOR} textAnchor="middle" dominantBaseline="central" fontWeight="bold">INDONESIA</text>
+        <rect x="18" y="60" width="10" height="20" rx="5" fill={ABUN_ARM_COLOR} stroke={ABUN_DETAIL_COLOR} strokeWidth="0.5"/>
+        <rect x="72" y="60" width="10" height="20" rx="5" fill={ABUN_ARM_COLOR} stroke={ABUN_DETAIL_COLOR} strokeWidth="0.5"/>
+        {/* Antenna position updated for static SVG - Moved significantly up */}
+        <line x1="50" y1="-1" x2="50" y2="-11" stroke={ABUN_DETAIL_COLOR} strokeWidth="1.5" />
+        <circle cx="50" cy="-12" r="3" fill={NEON_GREEN_COLOR} stroke={ABUN_DETAIL_COLOR} strokeWidth="0.3" filter="url(#static-antenna-glow-filter)" /> 
+        <ellipse cx="43" cy="35" rx="5" ry="3.5" fill="var(--robot-accent-color)" />
+        <ellipse cx="57" cy="35" rx="5" ry="3.5" fill="var(--robot-accent-color)" />
+      </svg>
+    );
+  }
+
+  // Original animated SVG
+  const swayVariants: Variants = {
+    animate: {
+      translateX: isInteractive ? [-2, 2, -1.5, 1.5, -2] : 0,
+      transition: { duration: 7, repeat: Infinity, ease: "easeInOut", repeatType: "mirror" as const }
+    }
+  };
+
+  const headBobVariants: Variants = {
+    animate: {
+      translateY: isInteractive ? [0, -1, 0.6, 0, -0.4, 0.2, 0] : 0,
+      rotate: isInteractive ? [0, 1.2, -1, 0.7, -0.5, 0] : 0,
+      transition: { duration: 6.5, repeat: Infinity, ease: "easeInOut", repeatType: "mirror" as const }
+    }
+  };
+
+  const eyeBlinkVariants: Variants = {
+    animate: {
+      scaleY: isInteractive ? [1, 1, 0.05, 1, 1, 1, 0.1, 1, 1, 1, 1, 1, 0.05, 1, 1] : 1,
+      transition: { duration: 4.5, repeat: Infinity, ease: "easeInOut" }
+    }
+  };
+  
+  const eyeGlowVariants: Variants = {
+    animate: {
+      opacity: isInteractive ? [0.8, 1, 0.8, 0.95, 0.8] : 1,
+      transition: { duration: 2, repeat: Infinity, ease: "easeInOut", repeatType: "mirror" as const }
+    }
+  };
+
+  const leftHandVariants: Variants = {
+    animate: {
+      translateY: isInteractive ? [0, -3, 0, 2, 0, -1.5, 0] : 0,
+      rotate: isInteractive ? [0, -2, 0, 1, 0] : 0,
+      transition: { duration: 3.5, repeat: Infinity, ease: "easeInOut", repeatType: "mirror" as const }
+    }
+  };
+
+  const rightHandVariants: Variants = {
+    animate: {
+      translateY: isInteractive ? [0, 2.5, 0, -3, 0, 1, 0] : 0,
+      rotate: isInteractive ? [0, 1.5, 0, -2.5, 0] : 0,
+      transition: { duration: 4, repeat: Infinity, ease: "easeInOut", repeatType: "mirror" as const, delay: 0.25 }
+    }
+  };
+  
+  const antennaPulseVariants: Variants = {
+    initial: { 
+      scale: [1, 1.1, 1],
+      opacity: [0.7, 0.9, 0.7],
+      color: NEON_GREEN_COLOR, 
+      transition: { 
+        duration: 1.5, 
+        repeat: Infinity, 
+        ease: "easeInOut",
+        repeatType: "mirror" as const
+      }
+    },
+    pulse: { 
+      scale: [1, 1.3, 1],
+      opacity: [1, 0.7, 1],
+      color: [ 
+        NEON_GREEN_COLOR,
+        NEON_YELLOW_COLOR,
+        NEON_RED_COLOR, // Using NEON_RED_COLOR
+        NEON_YELLOW_COLOR,
+        NEON_GREEN_COLOR, 
+      ],
+      transition: {
+        scale: { duration: 0.7, repeat: Infinity, ease: "easeInOut" }, 
+        opacity: { duration: 0.7, repeat: Infinity, ease: "easeInOut" }, 
+        color: { duration: 3, repeat: Infinity, ease: "linear", repeatType: "loop" as const } 
+      }
+    }
+  };
+
+  const chestTextBlinkVariants: Variants = {
+    animate: {
+      opacity: [1, 0.5, 1, 0.7, 1],
+      transition: { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
+    }
+  };
+
+  const peciNeonVariants: Variants = {
+    animate: {
+      // Direct fill animation for the peci base color
+      fill: [NEON_RED_COLOR, NEON_GREEN_COLOR, NEON_YELLOW_COLOR, NEON_RED_COLOR],
+      // This 'color' custom property will be used by the peci-neon-glow-filter's flood-color
+      // to synchronize the glow color with the fill color.
+      color: [NEON_RED_COLOR, NEON_GREEN_COLOR, NEON_YELLOW_COLOR, NEON_RED_COLOR],
+      transition: {
+        duration: 4.5, // Total duration for one cycle of R-G-Y-R
+        repeat: Infinity,
+        ease: "easeInOut", // Smooth transition between colors
+        // Individual property transitions if needed, but a single duration should work for synchronized animation
+      }
+    }
+  };
+
+
+  return (
+    <svg 
+      viewBox="0 0 100 100" 
+      xmlns="http://www.w3.org/2000/svg" 
+      className={className}
+      aria-label="Avatar Asisten AI Abun"
+    >
+      <defs>
+        <filter id="robot-eye-glow-filter" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="2.5" result="blurEye"/>
+          <feFlood floodColor="currentColor" floodOpacity="var(--robot-eye-glow-opacity, 0.8)" result="floodEye"/> 
+          <feComposite in="floodEye" in2="blurEye" operator="in" result="glowEye"/>
+          <feMerge>
+            <feMergeNode in="glowEye"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+         <filter id="antenna-glow-filter" x="-150%" y="-150%" width="400%" height="400%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blurAntenna"/>
+            <feFlood flood-color="currentColor" flood-opacity="0.9" result="floodColorAntenna"/>
+            <feComposite in="floodColorAntenna" in2="blurAntenna" operator="in" result="glowAntenna"/>
+            <feMerge>
+              <feMergeNode in="glowAntenna"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+        </filter>
+        <filter id="peci-neon-glow-filter" x="-150%" y="-150%" width="400%" height="400%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blurPeci"/>
+            <feFlood flood-color="currentColor" flood-opacity="0.95" result="floodColorPeci"/> {/* currentColor will be animated */}
+            <feComposite in="floodColorPeci" in2="blurPeci" operator="in" result="glowPeci"/>
+            <feMerge>
+                <feMergeNode in="glowPeci"/>
+                <feMergeNode in="SourceGraphic"/> {/* This ensures the original shape is also drawn */}
+            </feMerge>
+        </filter>
+      </defs>
+      
+      <motion.g variants={swayVariants} animate="animate">
+        {/* Shadow */}
+        <ellipse cx="50" cy="92" rx="35" ry="8" fill="rgba(0,0,0,0.3)" />
+        
+        {/* Body */}
+        <ellipse cx="50" cy="70" rx="30" ry="25" fill={ABUN_BODY_COLOR} stroke={ABUN_DETAIL_COLOR} strokeWidth="1"/>
+        <circle cx="50" cy="70" r="18" fill={ABUN_CHEST_ACCENT_COLOR} />
+        <motion.text 
+            x="50" 
+            y="67.5"
+            fontFamily='"Orbitron", sans-serif' 
+            fontSize="7.5"
+            fill={NEON_RED_TEXT_FILL} 
+            textAnchor="middle" 
+            dominantBaseline="central"
+            fontWeight="bold"
+            variants={chestTextBlinkVariants}
+            animate="animate"
+            style={{ textShadow: `0 0 2px #FFFFFF, 0 0 5px ${NEON_RED_GLOW_MAIN}, 0 0 10px ${NEON_RED_GLOW_WIDE_1}, 0 0 15px ${NEON_RED_GLOW_WIDE_2}` } as React.CSSProperties}
+        >
+            BBA
+        </motion.text>
+        <motion.text 
+            x="50" 
+            y="75"
+            fontFamily='"Orbitron", sans-serif' 
+            fontSize="5"
+            fill={ABUN_TEXT_ON_CHEST_COLOR}
+            textAnchor="middle" 
+            dominantBaseline="central" 
+            fontWeight="bold"
+            variants={chestTextBlinkVariants}
+            animate="animate"
+        >
+            INDONESIA
+        </motion.text>
+
+        {/* Neck */}
+        <rect x="42" y="48" width="16" height="8" fill={ABUN_DETAIL_COLOR} />
+
+        {/* Head Group with Bob Animation */}
+        <motion.g variants={headBobVariants} animate="animate" style={{ originX: "50px", originY: "35px" }}>
+          <ellipse cx="50" cy="35" rx="22" ry="20" fill={ABUN_HEAD_COLOR} stroke={ABUN_DETAIL_COLOR} strokeWidth="1"/>
+          
+          {/* Animated Peci (Cap) */}
+          <motion.path 
+            d="M35 20 Q 50 0, 65 20 L 63 22 Q 50 18, 37 22 Z" 
+            stroke={ABUN_DETAIL_COLOR} 
+            strokeWidth="0.5"
+            variants={peciNeonVariants}
+            animate="animate"
+            filter="url(#peci-neon-glow-filter)"
+            style={{ color: NEON_RED_COLOR } as React.CSSProperties} // Initial color for the filter, will be animated
+          />
+
+          {/* Face Screen */}
+          <path d="M35 28 Q 50 22, 65 28 V 42 Q 50 48, 35 42 Z" fill="var(--robot-screen-color)" opacity="0.9" stroke="var(--robot-accent-color)" strokeWidth="0.5" />
+          {/* Eyes with Glow and Blink */}
+          <motion.g variants={eyeGlowVariants} animate="animate">
+              <motion.ellipse cx="43" cy="35" rx="5" ry="3.5" fill="var(--robot-accent-color)" filter="url(#robot-eye-glow-filter)" variants={eyeBlinkVariants} style={{ color: 'var(--robot-accent-color)', '--robot-eye-glow-opacity': 0.9 } as React.CSSProperties} />
+              <motion.ellipse cx="57" cy="35" rx="5" ry="3.5" fill="var(--robot-accent-color)" filter="url(#robot-eye-glow-filter)" variants={eyeBlinkVariants} style={{ color: 'var(--robot-accent-color)', '--robot-eye-glow-opacity': 0.9, animationDelay: '0.15s' } as React.CSSProperties} />
+          </motion.g>
+          {/* Eye Highlights */}
+          <ellipse cx="42.5" cy="34.5" rx="1.5" ry="0.75" fill="#FFF" opacity="0.9"/>
+          <ellipse cx="56.5" cy="34.5" rx="1.5" ry="0.75" fill="#FFF" opacity="0.9"/>
+          {/* Antenna - position updated significantly up */}
+          <line x1="50" y1="-1" x2="50" y2="-11" stroke={ABUN_DETAIL_COLOR} strokeWidth="1.5" />
+          <motion.circle 
+            cx="50" 
+            cy="-12" 
+            r="3" 
+            fill="currentColor" // Will be animated by variants
+            filter="url(#antenna-glow-filter)" 
+            variants={antennaPulseVariants}
+            animate={isTyping ? "pulse" : "initial"}
+            style={{ color: NEON_GREEN_COLOR, '--robot-eye-glow-opacity': 0.8 } as React.CSSProperties} // Initial color for antenna filter
+          />
+          {/* "Mouth" line on screen */}
+          <rect x="45" y="42" width="10" height="1.5" rx="0.5" fill={ABUN_DETAIL_COLOR} opacity="0.7" />
+        </motion.g> {/* End of Head Group */}
+        
+        {/* Shoulders */}
+        <circle cx="25" cy="58" r="8" fill={ABUN_BODY_COLOR} stroke={ABUN_DETAIL_COLOR} strokeWidth="1"/>
+        <circle cx="75" cy="58" r="8" fill={ABUN_BODY_COLOR} stroke={ABUN_DETAIL_COLOR} strokeWidth="1"/>
+        
+        {/* Arms */}
+        <motion.rect x="18" y="60" width="10" height="20" rx="5" fill={ABUN_ARM_COLOR} stroke={ABUN_DETAIL_COLOR} strokeWidth="0.5" variants={leftHandVariants} animate="animate" style={{ originX: "23px", originY: "60px" }}/>
+        <motion.rect x="72" y="60" width="10" height="20" rx="5" fill={ABUN_ARM_COLOR} stroke={ABUN_DETAIL_COLOR} strokeWidth="0.5" variants={rightHandVariants} animate="animate" style={{ originX: "77px", originY: "60px" }}/>
+      </motion.g>
+    </svg>
+  );
+};
+
+interface AbunAvatarProps {
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  className?: string;
+  onClick?: () => void;
+  isInteractive?: boolean;
+  isTyping?: boolean; 
+}
+
+const AbunAvatar: React.FC<AbunAvatarProps> = ({ size = 'md', className = '', onClick, isInteractive = false, isTyping = false }) => {
+  let sizeClasses = 'w-20 h-20'; 
+  if (size === 'sm') sizeClasses = 'w-10 h-10';
+  if (size === 'lg') sizeClasses = 'w-28 h-28'; 
+  if (size === 'xl') sizeClasses = 'w-48 h-48 sm:w-64 sm:h-64';
+
+  const interactiveGlowClass = isInteractive ? 'hover:animate-pulse-glow shadow-glow-accent hover:shadow-glow-accent-strong' : 'shadow-glow-accent';
+
+  // If framer-motion isn't loaded, don't wrap with motion.div to avoid errors
+  if (!IS_MOTION_LOADED) {
+    return (
+      <div 
+        className={`${sizeClasses} ${className} ${isInteractive ? 'cursor-pointer' : ''}`}
+        onClick={onClick}
+        role={isInteractive ? "button" : undefined}
+        aria-pressed={isInteractive && onClick ? "false" : undefined}
+        tabIndex={isInteractive ? 0 : -1}
+        onKeyDown={isInteractive && onClick ? (e) => (e.key === 'Enter' || e.key === ' ') && onClick() : undefined}
+      >
+        <RobotIconSVG 
+          className={`w-full h-full object-contain drop-shadow-xl`} 
+          isTyping={isTyping}
+          isInteractive={isInteractive}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <motion.div 
+      className={`${sizeClasses} ${className} ${isInteractive ? 'cursor-pointer' : ''}`}
+      onClick={onClick}
+      role={isInteractive ? "button" : undefined}
+      aria-pressed={isInteractive && onClick ? "false" : undefined}
+      tabIndex={isInteractive ? 0 : -1}
+      onKeyDown={isInteractive && onClick ? (e) => (e.key === 'Enter' || e.key === ' ') && onClick() : undefined}
+      whileHover={isInteractive ? { scale: 1.05 } : {}}
+      whileTap={isInteractive ? { scale: 0.95 } : {}}
+      transition={{ type: "spring", stiffness: 300, damping: 15 }}
+    >
+      <RobotIconSVG 
+        className={`w-full h-full object-contain drop-shadow-xl ${interactiveGlowClass}`}
+        isTyping={isTyping}
+        isInteractive={isInteractive}
+      />
+    </motion.div>
+  );
+};
+
+export default AbunAvatar;
