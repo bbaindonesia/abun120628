@@ -1,0 +1,163 @@
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { ChatMessage, GroundingChunk, FrameActionPayload } from '../types'; // Added FrameActionPayload
+import { askAbun, resetAbunChat as resetAbunChatService } from '../services/geminiService';
+import { GREETING_MESSAGES } from '../constants';
+
+// Declare frame for frame.ai.frameAction to avoid TypeScript errors
+// This assumes 'frame' is provided by the execution environment (e.g., MakerSuite)
+declare const frame: any;
+
+const useAbunLogic = () => {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentTopic, setCurrentTopic] = useState<string | null>(null);
+  const [showWelcome, setShowWelcome] = useState(true);
+
+
+  const addMessage = useCallback((text: string, sender: 'user' | 'abun', isTyping: boolean = false, groundingSources?: GroundingChunk[]) => {
+    const newMessage: ChatMessage = {
+      id: Date.now().toString() + Math.random().toString(),
+      text,
+      sender,
+      timestamp: new Date(),
+      isTyping,
+    };
+    
+    let messageTextWithSources = text;
+    if (groundingSources && groundingSources.length > 0) {
+      const sourcesText = "\n\nSumber informasi (Google Search):\n" + groundingSources.map(s => `- ${s.web?.title || 'Sumber Web'}: ${s.web?.uri}`).join("\n");
+      messageTextWithSources += sourcesText;
+      newMessage.text = messageTextWithSources; // Update newMessage text
+    }
+
+    setMessages(prevMessages => {
+      if (isTyping && sender === 'abun') {
+        return [...prevMessages, newMessage];
+      } else if (!isTyping && sender === 'abun') {
+        const lastMessageIndex = prevMessages.length - 1;
+        if (lastMessageIndex >= 0 && prevMessages[lastMessageIndex].sender === 'abun' && prevMessages[lastMessageIndex].isTyping) {
+          return [...prevMessages.slice(0, lastMessageIndex), newMessage];
+        }
+      }
+      return [...prevMessages, newMessage];
+    });
+  }, [setMessages]); 
+
+  const sendInitialGreeting = useCallback(() => {
+    const randomGreeting = GREETING_MESSAGES[Math.floor(Math.random() * GREETING_MESSAGES.length)];
+    addMessage(randomGreeting, 'abun');
+  }, [addMessage]); // GREETING_MESSAGES is a constant, not needed in dep array
+  
+  useEffect(() => {
+    if (messages.length === 0 && showWelcome) {
+       sendInitialGreeting();
+    }
+  }, [sendInitialGreeting, messages.length, showWelcome]);
+
+
+  const handleSendMessage = useCallback(async (inputText: string, useGoogleSearch: boolean = false) => {
+    if (!inputText.trim()) return;
+
+    addMessage(inputText, 'user');
+    setIsLoading(true);
+    addMessage("...", 'abun', true); 
+
+    try {
+      if (inputText.toLowerCase().includes("sunda") || inputText.toLowerCase().includes("ngabodor")) {
+        setCurrentTopic('sunda_joke');
+      } else {
+        setCurrentTopic(null);
+      }
+
+      const abunResponse = await askAbun(inputText, useGoogleSearch);
+      
+      addMessage(abunResponse.text, 'abun', false, abunResponse.groundingSources);
+
+      if (abunResponse.frameAction) {
+        if (typeof frame !== 'undefined' && frame.ai && typeof frame.ai.frameAction === 'function') {
+          try {
+            console.log(`Executing frameAction: ${abunResponse.frameAction.action}`, abunResponse.frameAction.params);
+            await frame.ai.frameAction(abunResponse.frameAction.action, abunResponse.frameAction.params);
+          } catch (frameActionError) {
+            console.error("Error executing frame.ai.frameAction:", frameActionError);
+            const errorMsgText = "Maaf, terjadi kesalahan saat mencoba melakukan aksi peta/navigasi.";
+            addMessage(errorMsgText, 'abun'); 
+          }
+        } else {
+          let fallbackUrl = '';
+          let fallbackUserMessage = '';
+          const { action, params } = abunResponse.frameAction;
+
+          if (action === "maps_local.query_places" && params.query) {
+            fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(params.query as string)}`;
+            fallbackUserMessage = `Saya tidak bisa menampilkan peta interaktif langsung di sini, Akang/Teteh. Tapi, saya sudah bukakan lokasi pencarian "${params.query}" di Google Maps pada tab baru ya.`;
+          } else if (action === "maps_navigation.navigate" && params.destination) {
+            const destination = encodeURIComponent(params.destination as string);
+            const travelMode = (params.travelMode as string || 'driving').toLowerCase();
+            let originParams = '';
+            let originDescription = "lokasi Akang/Teteh saat ini";
+
+            if (params.origin && params.origin !== 'current_location') {
+              originParams = `&origin=${encodeURIComponent(params.origin as string)}`;
+              originDescription = params.origin as string;
+            }
+            fallbackUrl = `https://www.google.com/maps/dir/?api=1${originParams}&destination=${destination}&travelmode=${travelMode}`;
+            fallbackUserMessage = `Saya tidak bisa menampilkan navigasi interaktif langsung di sini. Sebagai gantinya, saya sudah bukakan rute dari ${originDescription} ke "${params.destination}" menggunakan mode ${travelMode} di Google Maps pada tab baru.`;
+          }
+
+          if (fallbackUrl) {
+            window.open(fallbackUrl, '_blank', 'noopener,noreferrer');
+            addMessage(fallbackUserMessage, 'abun');
+          } else {
+             addMessage("Maaf, saya tidak bisa melakukan aksi peta atau navigasi saat ini karena ada parameter yang kurang atau fitur tidak sepenuhnya didukung di sini.", 'abun');
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error("Error sending message to Abun:", error);
+      const errorText = "Aduh, aya gangguan teknis sakedap ti Abun. Cobi deui engke nya.";
+      setMessages(prev => { // Ensure setMessages is used here if modifying based on prev state
+        const lastMessageIndex = prev.length -1;
+        if(lastMessageIndex >=0 && prev[lastMessageIndex].sender === 'abun' && prev[lastMessageIndex].isTyping){
+          return [...prev.slice(0, lastMessageIndex), {
+            id: Date.now().toString(),
+            text: errorText,
+            sender: 'abun',
+            timestamp: new Date(),
+            isTyping: false
+          }];
+        }
+        // Fallback if the typing indicator wasn't the last message for some reason
+        return [...prev, { 
+            id: Date.now().toString(), 
+            text: errorText, 
+            sender: 'abun', 
+            timestamp: new Date(), 
+            isTyping: false 
+        }];
+      });
+    } finally {
+      setIsLoading(false);
+      setMessages(prev => prev.filter(msg => !(msg.sender === 'abun' && msg.isTyping === true && msg.text === "...")));
+    }
+  }, [addMessage, setIsLoading, setCurrentTopic, setMessages]); // askAbun is stable (import)
+
+  const resetChat = useCallback(() => {
+    setMessages([]);
+    resetAbunChatService(); // This is an imported function, stable.
+    setShowWelcome(true); 
+    sendInitialGreeting();
+  }, [sendInitialGreeting, setMessages, setShowWelcome]); // resetAbunChatService is stable
+
+
+  return {
+    messages,
+    isLoading,
+    handleSendMessage,
+    currentTopic, 
+    resetChat,
+  };
+};
+
+export default useAbunLogic;
