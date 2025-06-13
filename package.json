@@ -1,0 +1,21 @@
+
+{
+  "name": "abun-cs-bba",
+  "version": "1.0.0",
+  "description": "Customer Service BBA Indonesia",
+  "type": "module",
+  "main": "dist/bundle.js",
+  "scripts": {
+    "build": "esbuild index.tsx --bundle --outfile=dist/bundle.js --define:process.env.API_KEY=\\\"YOUR_GEMINI_API_KEY_HERE\\\" --jsx=automatic --loader:.ts=tsx --format=esm --minify --sourcemap --external:react --external:react-dom --external:react-router-dom --external:framer-motion --external:react-markdown --external:@google/genai",
+    "serve": "esbuild index.tsx --bundle --outfile=dist/bundle.js --define:process.env.API_KEY=\\\"YOUR_GEMINI_API_KEY_HERE\\\" --jsx=automatic --loader:.ts=tsx --format=esm --servedir=. --external:react --external:react-dom --external:react-router-dom --external:framer-motion --external:react-markdown --external:@google/genai --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "esbuild": "^0.23.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "react-router-dom": "^6.25.1"
+  }
+}

@@ -1,0 +1,10 @@
+
+{
+  "requestFramePermissions": [
+    "geolocation",
+    "deviceorientation"
+  ],
+  "name": "Abun PWA 120628",
+  "description": "Abun PWA 120628",
+  "prompt": ""
+}
